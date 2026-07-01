@@ -15,11 +15,15 @@ OUT="$REPO_ROOT/build"; rm -rf "$OUT"; mkdir -p "$OUT"
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 
 echo "==> cloning signalapp/libsignal v$VERSION"
-git clone --depth 1 --branch "v${VERSION}" https://github.com/signalapp/libsignal "$WORK/ls"
+# The release tags are annotated; a shallow clone's auto-checkout errors ("is not a commit") and
+# leaves an empty tree, so check out the tag explicitly after cloning.
+git clone --no-checkout --depth 1 --branch "v${VERSION}" https://github.com/signalapp/libsignal "$WORK/ls"
 cd "$WORK/ls"
+git checkout "v${VERSION}"
+test -f swift/build_ffi.sh || { echo "checkout failed: no swift/build_ffi.sh"; exit 1; }
 
-# libsignal pins a nightly toolchain (rust-toolchain.toml). Install it + iOS targets FOR IT.
-TOOLCHAIN="$(grep -oE 'nightly-[0-9-]+' rust-toolchain.toml | head -1)"
+# libsignal pins a nightly toolchain (file is `rust-toolchain`, no .toml). Install it + iOS targets FOR IT.
+TOOLCHAIN="$(grep -hoE 'nightly-[0-9-]+' rust-toolchain rust-toolchain.toml 2>/dev/null | head -1)"
 echo "==> rust toolchain: $TOOLCHAIN"
 rustup toolchain install "$TOOLCHAIN" --profile minimal
 
