@@ -31,7 +31,9 @@ rustup toolchain install "$TOOLCHAIN" --profile minimal
 # libsignal's iOS build uses full LTO, which emits LLVM-bitcode objects that
 # `xcodebuild -create-xcframework` cannot read (Unknown header 0xb17c0de). Disable LTO so the
 # static lib is plain Mach-O (larger, but xcframework-able). This is the whole reason the mirror exists.
-perl -i -pe 's/CARGO_PROFILE_RELEASE_LTO=fat/CARGO_PROFILE_RELEASE_LTO=off/; s/-flto=full //g;' swift/build_ffi.sh
+# Also drop -DOPENSSL_SMALL: with LTO off it leaves ring's p256 *_vartime functions undefined (they
+# were eliminated/resolved under fat LTO) → consumer link fails with "Undefined _ring_core_...p256_point_mul_base_vartime".
+perl -i -pe 's/CARGO_PROFILE_RELEASE_LTO=fat/CARGO_PROFILE_RELEASE_LTO=off/; s/-flto=full //g; s/-DOPENSSL_SMALL //g;' swift/build_ffi.sh
 
 TARGETS=(aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios)
 rustup target add --toolchain "$TOOLCHAIN" "${TARGETS[@]}"
