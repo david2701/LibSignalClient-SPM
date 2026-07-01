@@ -16,16 +16,16 @@ permissions:
 jobs:
   build:
     runs-on: macos-14
+    env:
+      HOMEBREW_NO_REQUIRE_TAP_TRUST: 1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install protoc
         run: brew install protobuf
-
-      - name: Rust toolchain
-        run: |
-          rustup toolchain install stable --profile minimal
-          rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+      # Rust nightly toolchain + iOS targets are installed by the build script (it reads the
+      # version libsignal pins in rust-toolchain.toml). cmake + go (for BoringSSL) are preinstalled
+      # on GitHub macOS runners.
 
       - name: Build xcframework (from source, no bitcode)
         run: bash scripts/build-xcframework.sh "${{ github.event.inputs.version }}"

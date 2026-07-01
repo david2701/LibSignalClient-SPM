@@ -18,10 +18,20 @@ echo "==> cloning signalapp/libsignal v$VERSION"
 git clone --depth 1 --branch "v${VERSION}" https://github.com/signalapp/libsignal "$WORK/ls"
 cd "$WORK/ls"
 
+# libsignal pins a nightly toolchain (rust-toolchain.toml). Install it + iOS targets FOR IT.
+TOOLCHAIN="$(grep -oE 'nightly-[0-9-]+' rust-toolchain.toml | head -1)"
+echo "==> rust toolchain: $TOOLCHAIN"
+rustup toolchain install "$TOOLCHAIN" --profile minimal
+
+# libsignal's iOS build uses full LTO, which emits LLVM-bitcode objects that
+# `xcodebuild -create-xcframework` cannot read (Unknown header 0xb17c0de). Disable LTO so the
+# static lib is plain Mach-O (larger, but xcframework-able). This is the whole reason the mirror exists.
+perl -i -pe 's/CARGO_PROFILE_RELEASE_LTO=fat/CARGO_PROFILE_RELEASE_LTO=off/; s/-flto=full //g;' swift/build_ffi.sh
+
 TARGETS=(aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios)
+rustup target add --toolchain "$TOOLCHAIN" "${TARGETS[@]}"
 for t in "${TARGETS[@]}"; do
-  echo "==> building libsignal_ffi for $t"
-  rustup target add "$t"
+  echo "==> building libsignal_ffi for $t (no LTO)"
   CARGO_BUILD_TARGET="$t" swift/build_ffi.sh --release
 done
 
