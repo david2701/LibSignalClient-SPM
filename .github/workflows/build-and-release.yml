@@ -1,0 +1,53 @@
+name: Build & release LibSignalClient xcframework
+
+# Manually dispatch with the upstream libsignal version to (re)build the FFI xcframework from
+# source, publish it as a release asset, sync the Swift sources, and tag the mirror.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Upstream signalapp/libsignal version (e.g. 0.79.1)"
+        required: true
+        default: "0.79.1"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install protoc
+        run: brew install protobuf
+
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+
+      - name: Build xcframework (from source, no bitcode)
+        run: bash scripts/build-xcframework.sh "${{ github.event.inputs.version }}"
+
+      - name: Publish release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="${{ github.event.inputs.version }}"
+          gh release create "$V" --title "LibSignalClient $V" \
+            --notes "Unofficial SPM mirror of signalapp/libsignal v$V. FFI built from source (no bitcode)." \
+            || echo "release exists, updating asset"
+          gh release upload "$V" build/SignalFfi.xcframework.zip --clobber
+
+      - name: Commit synced sources + Package.swift, tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="${{ github.event.inputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Package.swift Sources ffi-headers
+          git commit -m "libsignal $V: sync sources + xcframework checksum" || echo "no changes"
+          git push origin HEAD:${GITHUB_REF_NAME}
+          git tag -f "$V" && git push -f origin "$V"
