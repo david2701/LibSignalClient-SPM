@@ -30,16 +30,6 @@ jobs:
       - name: Build xcframework (from source, no bitcode)
         run: bash scripts/build-xcframework.sh "${{ github.event.inputs.version }}"
 
-      - name: Publish release asset
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          V="${{ github.event.inputs.version }}"
-          gh release create "$V" --title "LibSignalClient $V" \
-            --notes "Unofficial SPM mirror of signalapp/libsignal v$V. FFI built from source (no bitcode)." \
-            || echo "release exists, updating asset"
-          gh release upload "$V" build/SignalFfi.xcframework.zip --clobber
-
       - name: Commit synced sources + Package.swift, tag
         env:
           GH_TOKEN: ${{ github.token }}
@@ -51,3 +41,13 @@ jobs:
           git commit -m "libsignal $V: sync sources + xcframework checksum" || echo "no changes"
           git push origin HEAD:${GITHUB_REF_NAME}
           git tag -f "$V" && git push -f origin "$V"
+
+      - name: Publish release + asset (at the tag)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="${{ github.event.inputs.version }}"
+          gh release create "$V" --title "LibSignalClient $V" \
+            --notes "Unofficial SPM mirror of signalapp/libsignal v$V. FFI built from source (no bitcode)." \
+            || echo "release exists, updating asset"
+          gh release upload "$V" build/SignalFfi.xcframework.zip --clobber

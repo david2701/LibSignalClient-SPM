@@ -23,7 +23,8 @@ git checkout "v${VERSION}"
 test -f swift/build_ffi.sh || { echo "checkout failed: no swift/build_ffi.sh"; exit 1; }
 
 # libsignal pins a nightly toolchain (file is `rust-toolchain`, no .toml). Install it + iOS targets FOR IT.
-TOOLCHAIN="$(grep -hoE 'nightly-[0-9-]+' rust-toolchain rust-toolchain.toml 2>/dev/null | head -1)"
+TC_FILE="rust-toolchain"; [ -f "$TC_FILE" ] || TC_FILE="rust-toolchain.toml"
+TOOLCHAIN="$(grep -oE 'nightly-[0-9-]+' "$TC_FILE" | head -1)"
 echo "==> rust toolchain: $TOOLCHAIN"
 rustup toolchain install "$TOOLCHAIN" --profile minimal
 
