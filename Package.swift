@@ -17,7 +17,7 @@ let package = Package(
         .binaryTarget(
             name: "SignalFfi",
             url: "https://github.com/david2701/LibSignalClient-SPM/releases/download/0.79.1/SignalFfi.xcframework.zip",
-            checksum: "a1e3826f86e77f69a18677eaebbab922e898d23ab41eda03a7a4490e24cb87c8" // set by scripts/build-xcframework.sh
+            checksum: "b66a68e979b2c93399e2a2f74893ac2544071c0d18e0d274550584a4e298fb4f" // set by scripts/build-xcframework.sh
         ),
         .target(
             name: "LibSignalClient",
